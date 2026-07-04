@@ -2,6 +2,7 @@
 #include "DocentNetworkActor.h"
 #include "SocketSubsystem.h"
 #include "Interfaces/IPv4/IPv4Address.h"
+#include "Kismet/GameplayStatics.h"
 
 ADocentNetworkActor::ADocentNetworkActor()
 {
@@ -85,8 +86,20 @@ void ADocentNetworkActor::Tick(float DeltaTime)
 
 	if (bIsConnected)
 	{
-		// TODO: 모바일 디바이스 자이로 센서에서 실제 쿼터니언 값 추출 로직 연동
-		// 우선 통신 검증을 위해 가상의 회전 패킷 임시 송신
-		SendGyroData(0.0f, 0.0f, 0.0f, 1.0f);
+		// 현재 월드의 첫 번째 플레이어 컨트롤러 획득
+		APlayerController* PC = GetWorld()->GetFirstPlayerController();
+		if (PC)
+		{
+			FVector CamLoc;
+			FRotator CamRot;
+			// 모바일 AR 기기가 움직일 때 변하는 실제 카메라 시선 회전값 추출
+			PC->GetPlayerViewPoint(CamLoc, CamRot);
+
+			// FRotator를 쿼터니언(FQuat)으로 변환
+			FQuat GyroQuat = CamRot.Quaternion();
+
+			// DX12 서버로 실시간 자이로 쿼터니언 송신
+			SendGyroData(GyroQuat.X, GyroQuat.Y, GyroQuat.Z, GyroQuat.W);
+		}
 	}
 }
