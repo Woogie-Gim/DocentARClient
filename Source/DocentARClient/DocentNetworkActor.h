@@ -20,7 +20,7 @@ class DOCENTARCLIENT_API ADocentNetworkActor : public AActor
 {
 	GENERATED_BODY()
 
-	public:
+public:
 	ADocentNetworkActor();
 
 protected:
@@ -32,6 +32,9 @@ private:
 	FSocket* ClientSocket = nullptr;
 	bool bIsConnected = false;
 
+	void SendGyroData(float Qx, float Qy, float Qz, float Qw);
+
+public:
 	UPROPERTY(EditAnywhere, Category = "Network")
 	FString ServerIP = TEXT("127.0.0.1");
 
@@ -39,5 +42,4 @@ private:
 	int32 ServerPort = 9000;
 
 	bool ConnectToServer();
-	void SendGyroData(float Qx, float Qy, float Qz, float Qw);
 };
