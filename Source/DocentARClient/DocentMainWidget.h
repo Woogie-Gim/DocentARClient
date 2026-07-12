@@ -18,7 +18,14 @@ class DOCENTARCLIENT_API UDocentMainWidget : public UUserWidget
 {
 	GENERATED_BODY()
 	
-	protected:
+public:
+	// JNI 콜백을 위한 위젯 인스턴스 포인터
+	static TWeakObjectPtr<UDocentMainWidget> Instance;
+
+	// 갤러리 이미지 선택 완료 시 호출 콜백
+	void OnImageSelected(const FString& ImagePath);
+
+protected:
 	// 위젯 초기화 시 버튼 이벤트 바인딩
 	virtual void NativeConstruct() override;
 

@@ -6,9 +6,21 @@
 #include "Kismet/GameplayStatics.h"
 #include "DocentNetworkActor.h"
 
+// 안드로이드 JNI 연동 헤더
+#if PLATFORM_ANDROID
+#include "Android/AndroidApplication.h"
+#include "Android/AndroidJNI.h"
+#endif
+
+// 스태틱 인스턴스 초기화
+TWeakObjectPtr<UDocentMainWidget> UDocentMainWidget::Instance = nullptr;
+
 void UDocentMainWidget::NativeConstruct()
 {
 	Super::NativeConstruct();
+
+	// JNI 통신용 스태틱 인스턴스 저장
+	Instance = this;
 
 	// 버튼 클릭 이벤트 함수 바인딩
 	if (BtnConnect) BtnConnect->OnClicked.AddDynamic(this, &UDocentMainWidget::OnClickedConnect);
@@ -61,6 +73,18 @@ void UDocentMainWidget::OnClickedPickImage()
 {
 	// 갤러리 호출 및 사진 선택 로직 진입
 	if (TextStatus) TextStatus->SetText(FText::FromString(TEXT("상태: 모바일 갤러리 여는 중...")));
+
+	// 안드로이드 환경 한정 갤러리 액티비티 호출
+#if PLATFORM_ANDROID
+	if (JNIEnv* Env = FAndroidApplication::GetJavaEnv())
+	{
+		jmethodID OpenGalleryMethod = FJavaWrapper::FindMethod(Env, FJavaWrapper::GameActivityClassID, "OpenAndroidGallery", "()V", false);
+		if (OpenGalleryMethod)
+		{
+			FJavaWrapper::CallVoidMethod(Env, FJavaWrapper::GameActivityThis, OpenGalleryMethod);
+		}
+	}
+#endif
 }
 
 void UDocentMainWidget::OnClickedSendImage()
@@ -70,3 +94,31 @@ void UDocentMainWidget::OnClickedSendImage()
 	// 선택된 사진 바이너리 DX12 서버 송신 로직 진입
 	if (TextStatus) TextStatus->SetText(FText::FromString(TEXT("상태: 액자로 사진 전송 중...")));
 }
+
+void UDocentMainWidget::OnImageSelected(const FString& ImagePath)
+{
+	// 선택된 이미지 절대 경로 UI 출력 (디버깅용)
+	if (TextStatus)
+	{
+		TextStatus->SetText(FText::FromString(FString::Printf(TEXT("사진 선택 완료: %s"), *ImagePath)));
+	}
+}
+
+// Java에서 호출할 C++ JNI 네이티브 함수 구현
+#if PLATFORM_ANDROID
+extern "C" JNIEXPORT void JNICALL Java_com_epicgames_unreal_GameActivity_nativeOnImageSelected(JNIEnv* jenv, jobject thiz, jstring imagePath)
+{
+	const char* chars = jenv->GetStringUTFChars(imagePath, 0);
+	FString Path = FString(UTF8_TO_TCHAR(chars));
+	jenv->ReleaseStringUTFChars(imagePath, chars);
+
+	// 게임 스레드 안전성 확보 후 위젯 콜백 실행
+	AsyncTask(ENamedThreads::GameThread, [Path]()
+		{
+			if (UDocentMainWidget::Instance.IsValid())
+			{
+				UDocentMainWidget::Instance->OnImageSelected(Path);
+			}
+		});
+}
+#endif

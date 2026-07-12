@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root xmlns:android="http://schemas.android.com/apk/res/android">
+
+	<!-- GameActivity 클래스에 새로운 함수 추가 -->
+	<gameActivityClassAdditions>
+		<insert>
+			// 갤러리 호출 인텐트 생성 및 실행
+			public void OpenAndroidGallery() {
+			android.content.Intent intent = new android.content.Intent(android.content.Intent.ACTION_PICK, android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
+			startActivityForResult(intent, 7777);
+			}
+
+			// C++에서 구현할 네이티브 함수 선언
+			public native void nativeOnImageSelected(String imagePath);
+		</insert>
+	</gameActivityClassAdditions>
+
+	<!-- onActivityResult 함수 '내부'에 코드만 삽입 -->
+	<gameActivityOnActivityResultAdditions>
+		<insert>
+			if (requestCode == 7777 &amp;&amp; resultCode == RESULT_OK &amp;&amp; data != null) {
+			android.net.Uri selectedImage = data.getData();
+			if (selectedImage != null) {
+			// C++ 네이티브 함수로 선택된 이미지 URI 문자열 전달
+			nativeOnImageSelected(selectedImage.toString());
+			}
+			}
+		</insert>
+	</gameActivityOnActivityResultAdditions>
+
+</root>
