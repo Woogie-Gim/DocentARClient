@@ -75,6 +75,9 @@ private:
 	UFUNCTION()
 	void OnClickedSendImage();
 
+	// 선택된 이미지 바이트 데이터 캐싱
+	TArray<uint8> CachedImageData;
+
 private:
 	// 월드에 존재하는 네트워크 통신 액터 포인터
 	UPROPERTY()

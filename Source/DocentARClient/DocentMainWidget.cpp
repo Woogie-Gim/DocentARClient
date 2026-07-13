@@ -89,19 +89,58 @@ void UDocentMainWidget::OnClickedPickImage()
 
 void UDocentMainWidget::OnClickedSendImage()
 {
-	if (!NetworkActor) return;
+	// 캐싱된 데이터 및 네트워크 액터 유효성 검증
+	if (!NetworkActor || CachedImageData.Num() == 0) return;
 
-	// 선택된 사진 바이너리 DX12 서버 송신 로직 진입
 	if (TextStatus) TextStatus->SetText(FText::FromString(TEXT("상태: 액자로 사진 전송 중...")));
+
+	// 캐싱된 이미지 데이터 서버 송신
+	NetworkActor->SendImageData(CachedImageData);
 }
 
 void UDocentMainWidget::OnImageSelected(const FString& ImagePath)
 {
-	// 선택된 이미지 절대 경로 UI 출력 (디버깅용)
-	if (TextStatus)
+	if (TextStatus) TextStatus->SetText(FText::FromString(TEXT("상태: 이미지 바이트 변환 중...")));
+
+	TArray<uint8> ImageData;
+
+#if PLATFORM_ANDROID
+	// JNI 환경 포인터 획득
+	if (JNIEnv* Env = FAndroidApplication::GetJavaEnv())
 	{
-		TextStatus->SetText(FText::FromString(FString::Printf(TEXT("사진 선택 완료: %s"), *ImagePath)));
+		// FString 문자열 JNI 규격 변환
+		jstring jUriString = Env->NewStringUTF(TCHAR_TO_UTF8(*ImagePath));
+
+		// Java GetImageData 함수 메모리 탐색
+		jmethodID GetImageDataMethod = FJavaWrapper::FindMethod(Env, FJavaWrapper::GameActivityClassID, "GetImageData", "(Ljava/lang/String;)[B", false);
+
+		if (GetImageDataMethod)
+		{
+			// Java 함수 호출 및 바이트 배열 수신
+			jbyteArray jByteArray = (jbyteArray)FJavaWrapper::CallObjectMethod(Env, FJavaWrapper::GameActivityThis, GetImageDataMethod, jUriString);
+
+			if (jByteArray)
+			{
+				// 수신 배열 크기 측정 및 C++ TArray 메모리 할당
+				int32 ArraySize = Env->GetArrayLength(jByteArray);
+				ImageData.SetNumUninitialized(ArraySize);
+
+				// JNI 메모리 블록 C++ 복사
+				Env->GetByteArrayRegion(jByteArray, 0, ArraySize, reinterpret_cast<jbyte*>(ImageData.GetData()));
+
+				// JNI 로컬 참조 해제
+				Env->DeleteLocalRef(jByteArray);
+			}
+		}
+		// JNI 로컬 참조 해제
+		Env->DeleteLocalRef(jUriString);
 	}
+#endif
+
+	// 변환된 데이터 클래스 멤버 변수에 캐싱
+	CachedImageData = ImageData;
+
+	if (TextStatus) TextStatus->SetText(FText::FromString(TEXT("상태: 사진 준비 완료! 전송 버튼을 눌러주세요.")));
 }
 
 // Java에서 호출할 C++ JNI 네이티브 함수 구현

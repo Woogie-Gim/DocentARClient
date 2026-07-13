@@ -42,4 +42,7 @@ public:
 	int32 ServerPort = 9000;
 
 	bool ConnectToServer();
+
+	// 이미지 바이트 배열 TCP 송신
+	void SendImageData(const TArray<uint8>& ImageData);
 };

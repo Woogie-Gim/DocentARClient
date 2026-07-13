@@ -13,6 +13,28 @@
 			// C++에서 구현할 네이티브 함수 선언
 			public native void nativeOnImageSelected(String imagePath);
 		</insert>
+		<insert>
+			// URI 기반 이미지 바이트 스트림 변환 및 배열 반환
+			public byte[] GetImageData(String uriString) {
+				try {
+					android.net.Uri uri = android.net.Uri.parse(uriString);
+					java.io.InputStream inputStream = getApplicationContext().getContentResolver().openInputStream(uri);
+					java.io.ByteArrayOutputStream byteBuffer = new java.io.ByteArrayOutputStream();
+          
+					int bufferSize = 1024;
+					byte[] buffer = new byte[bufferSize];
+					int len = 0;
+          
+					while ((len = inputStream.read(buffer)) != -1) {
+						byteBuffer.write(buffer, 0, len);
+					}
+					return byteBuffer.toByteArray();
+				} catch (Exception e) {
+					e.printStackTrace();
+					return null;
+				}
+			}
+		</insert>
 	</gameActivityClassAdditions>
 
 	<!-- onActivityResult 함수 '내부'에 코드만 삽입 -->

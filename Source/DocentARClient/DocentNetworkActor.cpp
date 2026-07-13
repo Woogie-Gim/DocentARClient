@@ -103,3 +103,27 @@ void ADocentNetworkActor::Tick(float DeltaTime)
 		}
 	}
 }
+
+void ADocentNetworkActor::SendImageData(const TArray<uint8>& ImageData)
+{
+	// 소켓 유효성 및 연결 상태 검증
+	if (!ClientSocket || ClientSocket->GetConnectionState() != SCS_Connected) return;
+
+	// 페이로드 크기 산출 및 패킷 총 크기 계산
+	int32 DataSize = ImageData.Num();
+	int32 PacketSize = DataSize + sizeof(int32);
+
+	// 송신용 직렬화 버퍼 생성 및 할당
+	TArray<uint8> SendBuffer;
+	SendBuffer.SetNumUninitialized(PacketSize);
+
+	// 패킷 헤더(데이터 크기) 메모리 복사
+	FMemory::Memcpy(SendBuffer.GetData(), &DataSize, sizeof(int32));
+
+	// 패킷 페이로드(이미지 데이터) 메모리 복사
+	FMemory::Memcpy(SendBuffer.GetData() + sizeof(int32), ImageData.GetData(), DataSize);
+
+	// TCP 소켓 데이터 송신
+	int32 BytesSent = 0;
+	ClientSocket->Send(SendBuffer.GetData(), SendBuffer.Num(), BytesSent);
+}
